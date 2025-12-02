@@ -34,7 +34,8 @@ create table if not exists chunks (
     content text not null,
     tokens integer,
     metadata jsonb default '{}'::jsonb,
-    embedding vector(384), -- Ajustar dimensão conforme modelo (384 para MiniLM-L6-v2)
+    embedding vector(384), -- 384 dims para sentence-transformers/all-MiniLM-L6-v2 (padrão)
+    processed_for_generation boolean default false, -- Tracking de chunks já processados para geração
     created_at timestamp with time zone default timezone('utc'::text, now())
 );
 
@@ -61,7 +62,7 @@ create table if not exists examples (
     exam_board text,
     exam_year integer,
     tags text[],
-    embedding vector(384), -- Ajustar dimensão conforme modelo
+    embedding vector(384), -- 384 dims para sentence-transformers/all-MiniLM-L6-v2 (padrão)
     law_id uuid references laws(id),
     article_id uuid references articles(id),
     chunk_ids uuid[],
@@ -77,6 +78,34 @@ create table if not exists migrations (
     completed_at timestamp with time zone,
     details jsonb default '{}'::jsonb
 );
+
+-- =============================================================================
+-- ÍNDICES
+-- =============================================================================
+
+-- Índices de busca vetorial (IVFFLAT)
+create index if not exists chunks_embedding_idx on chunks
+  using ivfflat (embedding vector_cosine_ops)
+  with (lists = 100);
+
+create index if not exists examples_embedding_idx on examples
+  using ivfflat (embedding vector_cosine_ops)
+  with (lists = 100);
+
+-- Índices de relacionamento
+create index if not exists chunks_law_id_idx on chunks (law_id);
+create index if not exists chunks_article_id_idx on chunks (article_id);
+create index if not exists examples_dataset_id_idx on examples (dataset_id);
+create index if not exists examples_law_id_idx on examples (law_id);
+create index if not exists examples_tags_idx on examples using gin (tags);
+
+-- Índice parcial para tracking de chunks não processados (otimização)
+create index if not exists chunks_unprocessed_idx on chunks (processed_for_generation)
+  where processed_for_generation = false;
+
+-- =============================================================================
+-- FUNÇÕES RPC
+-- =============================================================================
 
 -- Função RPC para buscar chunks similares
 create or replace function match_chunks (
