@@ -12,6 +12,9 @@ Repositório para construção do maior dataset jurídico aberto do Brasil para 
 - [`PRD.md`](PRD.md): PRD 2.0 em português com visão estratégica, roadmap e análise de riscos.
 - [`SCHEMA.md`](SCHEMA.md): proposta de schema Postgres/Supabase com pgvector para unificar armazenamento de normas, chunks e exemplos.
 
+## Docker e ambientes
+- Guia rápido: [`docs/DOCKER.md`](docs/DOCKER.md) cobre imagens multi-stage, Compose (dev/prod) e recomendações de segurança/performance.
+
 ## Esquema de dados recomendado
 O schema descrito em [`SCHEMA.md`](SCHEMA.md) organiza o projeto em quatro camadas:
 1. **Fontes normativas** (`laws`, `articles`)

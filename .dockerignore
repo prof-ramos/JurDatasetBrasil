@@ -1,0 +1,36 @@
+# Bytecode / venv
+__pycache__/
+*.pyc
+*.pyo
+.Python
+.venv/
+venv/
+env/
+build/
+dist/
+
+# Local & generated data
+0-RawDocs/
+1-MarkdownClean/
+2-Chunks/
+3-FinalDataset/
+4-Benchmarks/
+5-Models/
+logs/
+
+# VCS / tooling
+.git
+.gitignore
+.DS_Store
+.mcp.json
+.vercel
+.vercelignore
+*.swp
+
+# Env files (keep example)
+.env
+.env.*
+!.env.example
+
+# Caches
+.cache/

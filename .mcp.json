@@ -31,9 +31,13 @@
       ]
     },
     "huggingface": {
-      "url": "https://huggingface.co/mcp",
-      "headers": {
-        "Authorization": "Bearer <YOUR_HF_TOKEN>"
+      "command": "npx",
+      "args": [
+        "-y",
+        "@huggingface/mcp-server@latest"
+      ],
+      "env": {
+        "HF_TOKEN": "<YOUR_HF_TOKEN>"
       }
     }
   }
