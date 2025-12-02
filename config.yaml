@@ -14,6 +14,8 @@ llm:
 embeddings:
   model: "sentence-transformers/all-MiniLM-L6-v2"
   dimension: 384
+  batch_size: 32
+  normalize: true
 
 pipeline:
   chunk_size: 1500
@@ -21,6 +23,13 @@ pipeline:
   min_output_length: 50
   max_output_length: 1000
   similarity_threshold: 0.85
+  max_examples_per_chunk: 3
+  api_delay: 1.0
+  min_instruction_length: 20
+  duplicate_threshold: 0.95
+  train_split: 0.80
+  validation_split: 0.15
+  test_split: 0.05
 
 prompts:
   generation_system: |
@@ -49,3 +58,22 @@ prompts:
     Retorne apenas:
     - "APROVADO" se a resposta está correta e bem fundamentada
     - "REPROVADO: [motivo]" se houver erro factual, imprecisão ou informação não baseada no texto
+
+# Dataset versioning
+dataset:
+  name: "JurDatasetBrasil"
+  current_version: "v0.1"
+  description: "Dataset jurídico brasileiro para fine-tuning de LLMs"
+  license: "CC-BY-4.0"
+
+# Quality assurance
+quality:
+  min_accuracy: 0.94
+  min_examples_per_law: 100
+  exam_boards: ["CESPE", "FGV", "VUNESP", "FCC", "IBFC"]
+
+# Logging
+logging:
+  level: "INFO"
+  rotation: "1 day"
+  retention: "30 days"
