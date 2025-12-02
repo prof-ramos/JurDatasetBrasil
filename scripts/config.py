@@ -237,21 +237,6 @@ def validate_config() -> bool:
         "OPENROUTER_API_KEY": OPENROUTER_API_KEY
     }
 
-    missing = [k for k, v in required_vars.items() if not v]
-
-    if missing:
-        logger.error(f"Variáveis de ambiente obrigatórias ausentes: {', '.join(missing)}")
-        logger.error("Configure o arquivo .env baseado em .env.example")
-        # Em ambiente de build (Vercel), podemos não ter .env, então retornamos False mas não quebramos se for import
-        if os.getenv("VERCEL"):
-             logger.warning("Rodando na Vercel, ignorando falta de .env no build time.")
-             return True
-        raise ValueError(f"Configuração inválida: variáveis ausentes: {', '.join(missing)}")
-
-    logger.info("✓ Configuração validada com sucesso")
-    return True
-
-if __name__ == "__main__":
     # Teste de configuração
     logger.info("=== Configuração do JurDatasetBrasil ===")
     logger.info(f"Ambiente: {ENV}")
