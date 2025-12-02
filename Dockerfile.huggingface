@@ -1,0 +1,63 @@
+# syntax=docker/dockerfile:1.6
+# =============================================================================
+# JurDatasetBrasil - Hugging Face Spaces Dockerfile
+# =============================================================================
+# Otimizado para deploy em Hugging Face Spaces (Gradio/Streamlit)
+# Suporta GPU e CPU, com cache de modelos e datasets
+
+FROM python:3.11-slim
+
+# Metadados da imagem
+LABEL org.opencontainers.image.source="https://github.com/prof-ramos/JurDatasetBrasil"
+LABEL org.opencontainers.image.description="Dataset jurídico brasileiro para fine-tuning de LLMs"
+LABEL org.opencontainers.image.licenses="CC-BY-4.0"
+
+# Configurações de ambiente
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    GRADIO_SERVER_NAME=0.0.0.0 \
+    GRADIO_SERVER_PORT=7860 \
+    HF_HOME=/app/.cache/huggingface \
+    TRANSFORMERS_CACHE=/app/.cache/transformers \
+    HF_DATASETS_CACHE=/app/.cache/datasets
+
+WORKDIR /app
+
+# Instalar dependências do sistema
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar requirements primeiro (cache layer)
+COPY requirements.txt requirements-huggingface.txt ./
+
+# Instalar dependências Python
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip setuptools wheel && \
+    pip install -r requirements.txt && \
+    pip install -r requirements-huggingface.txt
+
+# Criar diretórios de cache
+RUN mkdir -p /app/.cache/huggingface /app/.cache/transformers /app/.cache/datasets
+
+# Copiar código da aplicação
+COPY . .
+
+# Criar usuário não-root para HF Spaces
+RUN useradd -m -u 1000 user && \
+    chown -R user:user /app
+
+USER user
+
+# Expor porta do Gradio/Streamlit
+EXPOSE 7860
+
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:7860/ || exit 1
+
+# Comando padrão (pode ser sobrescrito no HF Space)
+CMD ["python", "huggingface/app.py"]

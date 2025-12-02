@@ -1,0 +1,129 @@
+name: Sync to Hugging Face
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '3-FinalDataset/**'
+      - 'huggingface/**'
+      - '.github/workflows/sync-huggingface.yml'
+  workflow_dispatch:
+    inputs:
+      upload_dataset:
+        description: 'Upload dataset to HF Hub'
+        required: false
+        type: boolean
+        default: false
+      sync_space:
+        description: 'Sync Space code'
+        required: false
+        type: boolean
+        default: true
+
+env:
+  HF_SPACE_REPO: prof-ramos/JurDatasetBrasil-Explorer
+  HF_DATASET_REPO: prof-ramos/JurDatasetBrasil
+
+jobs:
+  sync-space:
+    name: Sync HF Space
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || inputs.sync_space
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          lfs: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install huggingface-hub
+
+      - name: Push to HF Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          # Clone HF Space repo
+          git clone https://huggingface.co/spaces/${{ env.HF_SPACE_REPO }} hf-space
+          cd hf-space
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Copy files
+          cp ../huggingface/app.py app.py
+          cp ../.space.yml .
+          cp ../requirements-huggingface.txt requirements.txt
+          cp ../huggingface/README.md README.md
+
+          # Commit and push
+          git add .
+          git diff --quiet && git diff --staged --quiet || (
+            git commit -m "🔄 Sync from GitHub: ${{ github.sha }}"
+            git push https://oauth2:$HF_TOKEN@huggingface.co/spaces/${{ env.HF_SPACE_REPO }}
+          )
+
+  upload-dataset:
+    name: Upload Dataset to HF Hub
+    runs-on: ubuntu-latest
+    if: inputs.upload_dataset == true
+    needs: sync-space
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install datasets huggingface-hub pandas
+
+      - name: Check dataset files
+        run: |
+          if [ ! -d "3-FinalDataset" ] || [ -z "$(ls -A 3-FinalDataset/*.jsonl 2>/dev/null)" ]; then
+            echo "⚠️  No dataset files found in 3-FinalDataset/, skipping upload"
+            exit 0
+          fi
+
+      - name: Upload to HF Hub
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_REPO_ID: ${{ env.HF_DATASET_REPO }}
+        run: |
+          python huggingface/upload_dataset.py
+
+      - name: Create release tag
+        if: success()
+        run: |
+          VERSION=$(date +v%Y.%m.%d)
+          git tag $VERSION
+          git push origin $VERSION || echo "Tag already exists"
+
+  notify:
+    name: Notify on completion
+    runs-on: ubuntu-latest
+    needs: [sync-space, upload-dataset]
+    if: always()
+
+    steps:
+      - name: Summarize
+        run: |
+          echo "## 🤗 Hugging Face Sync Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Space:** https://huggingface.co/spaces/${{ env.HF_SPACE_REPO }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Dataset:** https://huggingface.co/datasets/${{ env.HF_DATASET_REPO }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY

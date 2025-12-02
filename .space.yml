@@ -1,0 +1,50 @@
+# =============================================================================
+# Hugging Face Space Configuration
+# =============================================================================
+# Configuração para deploy do JurDatasetBrasil no HF Spaces
+
+# SDK options: gradio | streamlit | docker | static
+sdk: gradio
+sdk_version: 4.13.0
+
+# App configuration
+app_file: huggingface/app.py
+app_port: 7860
+
+# Python version
+python_version: 3.11
+
+# Hardware requirements
+# Options: cpu-basic | cpu-upgrade | t4-small | t4-medium | a10g-small | a10g-large
+suggested_hardware: cpu-basic
+
+# Storage (for models and datasets cache)
+# Options: small | medium | large
+suggested_storage: small
+
+# License
+license: cc-by-4.0
+
+# Tags for discoverability
+tags:
+  - legal
+  - portuguese
+  - dataset
+  - fine-tuning
+  - administrative-law
+  - brazil
+  - llm
+  - q-and-a
+
+# Models (if loading from hub)
+models:
+  - sentence-transformers/all-MiniLM-L6-v2
+
+# Disable telemetry
+disable_embedding: false
+
+# Pinned to ensure reproducibility
+pinned: false
+
+# Enable API
+enable_api: true
