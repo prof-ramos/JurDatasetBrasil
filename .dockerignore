@@ -1,15 +1,37 @@
-# Bytecode / venv
+# =============================================================================
+# JurDatasetBrasil - Docker Ignore
+# =============================================================================
+# Arquivos e diretórios excluídos do contexto de build Docker
+# Reduz tamanho do contexto e acelera builds
+
+# Python bytecode e virtual environments
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*$py.class
+*.so
 .Python
 .venv/
 venv/
 env/
+ENV/
 build/
+develop-eggs/
 dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Local & generated data
+# Dados locais gerados (volumes Docker devem montar estes)
 0-RawDocs/
 1-MarkdownClean/
 2-Chunks/
@@ -17,20 +39,76 @@ dist/
 4-Benchmarks/
 5-Models/
 logs/
+*.log
+backups/
 
-# VCS / tooling
-.git
+# Version Control System
+.git/
 .gitignore
-.DS_Store
-.mcp.json
-.vercel
-.vercelignore
-*.swp
+.gitattributes
+.github/
 
-# Env files (keep example)
+# IDE e ferramentas de desenvolvimento
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Docker e CI/CD
+.docker/
+docker-compose.override.yml
+.dockerignore
+Dockerfile.dev
+
+# Ambiente e secrets (NUNCA incluir no build!)
 .env
 .env.*
+.env.local
+.env.development
+.env.production
 !.env.example
 
-# Caches
+# Configurações MCP e Vercel
+.mcp.json
+.vercel/
+.vercelignore
+
+# Caches e temporários
 .cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.cover
+.hypothesis/
+
+# Documentação e assets estáticos (não necessários em runtime)
+docs/
+*.md
+!README.md
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Test e quality
+tests/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.pytest_cache/
+
+# Notebooks e exploração
+*.ipynb
+.ipynb_checkpoints/
+
+# Makefile e scripts locais
+Makefile
+*.sh
+!scripts/*.sh
