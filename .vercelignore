@@ -1,0 +1,44 @@
+# Ignorar arquivos pesados que não são necessários para a API
+
+# Dados e documentos
+0-RawDocs/
+1-MarkdownClean/
+2-Chunks/
+3-FinalDataset/
+4-Benchmarks/
+5-Models/
+logs/
+
+# Scripts Python locais (não usados pela API)
+scripts/
+dashboard/
+
+# Arquivos de desenvolvimento
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Documentação
+*.md
+!README.md
+
+# Git e ambiente
+.git/
+.gitignore
+.env
+.env.*
+!.env.example
+
+# Arquivos grandes
+*.xml
+*.pdf
+*.docx
+*.jsonl
+
+# Claude
+.claude/

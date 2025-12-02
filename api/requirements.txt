@@ -1,0 +1,8 @@
+# Dependências mínimas para a API Vercel
+# Apenas o necessário para FastAPI funcionar
+
+fastapi==0.104.1
+python-dotenv==1.0.0
+
+# Remover psycopg2 (não precisa de database na API simples)
+# Remover todas as dependências pesadas de ML/NLP

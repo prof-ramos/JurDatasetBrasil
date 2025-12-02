@@ -1,14 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import sys
 import os
-from pathlib import Path
-
-# Adicionar o diretório raiz ao sys.path para importar scripts
-ROOT_DIR = Path(__file__).parent.parent
-sys.path.append(str(ROOT_DIR))
-
-from scripts.config import LLM_MODELS, GENERATION_SYSTEM_PROMPT, VALIDATION_SYSTEM_PROMPT
 
 app = FastAPI(
     title="JurDatasetBrasil API",
@@ -27,11 +19,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Configurações estáticas (simplificadas para deployment)
+LLM_MODELS = {
+    "gemini": {
+        "model": "google/gemini-flash-1.5",
+        "provider": "openrouter",
+        "temperature": 0.3
+    },
+    "grok": {
+        "model": "x-ai/grok-beta",
+        "provider": "openrouter",
+        "temperature": 0.3
+    }
+}
+
+GENERATION_SYSTEM_PROMPT = """Você é um assistente especializado em Direito Administrativo Brasileiro.
+Gere exemplos de treinamento baseados em legislação brasileira."""
+
+VALIDATION_SYSTEM_PROMPT = """Você é um revisor especializado em Direito Administrativo Brasileiro.
+Valide a precisão e qualidade dos exemplos de treinamento."""
+
 @app.get("/")
 def read_root():
     return {
         "message": "JurDatasetBrasil API is running",
-        "docs": "/docs"
+        "version": "0.1.0",
+        "docs": "/docs",
+        "health": "/health"
     }
 
 @app.get("/config/models")
@@ -49,4 +63,8 @@ def get_prompts():
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    return {
+        "status": "healthy",
+        "service": "JurDatasetBrasil API",
+        "version": "0.1.0"
+    }
