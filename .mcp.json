@@ -1,0 +1,40 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--read-only",
+        "--project-ref=<project-ref>"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "<personal-access-token>"
+      }
+    },
+    "markitdown": {
+      "command": "docker",
+      "args": [
+        "run",
+        "--rm",
+        "-i",
+        "markitdown-mcp:latest"
+      ]
+    },
+    "mcp-server-box": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/path/to/mcp-server-box",
+        "run",
+        "src/mcp_server_box.py"
+      ]
+    },
+    "huggingface": {
+      "url": "https://huggingface.co/mcp",
+      "headers": {
+        "Authorization": "Bearer <YOUR_HF_TOKEN>"
+      }
+    }
+  }
+}
