@@ -1,5 +1,15 @@
 # Configuração de Variáveis de Ambiente - Vercel
 
+## Dependências do Projeto
+
+- **`requirements.txt`**: Dependências mínimas para API Vercel (FastAPI + python-dotenv)
+- **`requirements-dev.txt`**: Dependências completas para pipeline de desenvolvimento local
+
+Para desenvolvimento local, use:
+```bash
+pip install -r requirements-dev.txt
+```
+
 ## Variáveis Necessárias
 
 Configure estas variáveis no painel da Vercel (Settings → Environment Variables):
