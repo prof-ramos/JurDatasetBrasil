@@ -2,6 +2,28 @@
 
 Repositório para construção do maior dataset jurídico aberto do Brasil para treinamento e avaliação de LLMs. Aqui ficam o PRD, a estrutura de pastas para ingestão de documentos e o esquema de dados sugerido para armazenar tanto fontes normativas quanto exemplos de treinamento.
 
+## 🤗 Hugging Face Space
+
+**Demo interativo:** [SherlockRamos/JurDatasetBrasil-Explorer](https://huggingface.co/spaces/SherlockRamos/JurDatasetBrasil-Explorer)
+
+Explore o dataset através de uma interface Gradio com busca, estatísticas e visualização de exemplos.
+
+### 🚀 Deploy seu próprio Space
+
+```bash
+# 1. Criar Space no HF
+hf repo create SEU-USERNAME/JurDatasetBrasil-Explorer --repo-type space --space-sdk gradio
+
+# 2. Preparar e enviar arquivos
+mkdir temp_space && cd temp_space
+cp ../huggingface/app.py app.py && cp ../.space.yml . && cp ../requirements-huggingface.txt requirements.txt
+git init && git checkout -b main && git add . && git commit -m "🚀 Deploy"
+git remote add space https://huggingface.co/spaces/SEU-USERNAME/JurDatasetBrasil-Explorer
+git push space main
+```
+
+**Documentação completa:** [docs/HUGGINGFACE.md](docs/HUGGINGFACE.md)
+
 ## Objetivos do projeto
 - Consolidar legislação, súmulas e comentários em formato auditável.
 - Gerar datasets em padrão Alpaca/ShareGPT com rastreabilidade completa.
