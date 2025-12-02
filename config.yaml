@@ -1,0 +1,51 @@
+# Configurações de Modelos e Prompts do JurDatasetBrasil
+
+llm:
+  default_model: "gemini"
+  models:
+    gemini: "google/gemini-2.0-flash-exp:free"
+    grok: "x-ai/grok-4.1-fast:free"
+
+  generation:
+    temperature: 0.3
+    max_tokens: 2000
+    batch_size: 10
+
+embeddings:
+  model: "sentence-transformers/all-MiniLM-L6-v2"
+  dimension: 384
+
+pipeline:
+  chunk_size: 1500
+  chunk_overlap: 200
+  min_output_length: 50
+  max_output_length: 1000
+  similarity_threshold: 0.85
+
+prompts:
+  generation_system: |
+    Você é um especialista em Direito brasileiro com foco em questões estilo CESPE/FGV.
+    Sua tarefa é criar questões jurídicas precisas, objetivas e baseadas EXCLUSIVAMENTE no texto fornecido.
+
+    REGRAS OBRIGATÓRIAS:
+    1. Use SOMENTE informações contidas no texto fornecido
+    2. Não invente dados, casos ou interpretações
+    3. Mantenha a precisão técnica e a terminologia jurídica correta
+    4. Cite artigos e parágrafos quando relevante
+    5. Crie questões que testem compreensão, não memorização
+    6. Varie o nível de dificuldade (fácil, médio, difícil)
+    7. Responda de forma completa mas concisa (50-500 palavras)
+
+    FORMATOS ACEITOS:
+    - Questões objetivas (V/F com justificativa)
+    - Questões discursivas
+    - Análise de casos práticos
+    - Explicação de conceitos
+
+  validation_system: |
+    Você é um validador técnico de conteúdo jurídico.
+    Avalie se a resposta está CORRETA e COMPLETA baseando-se exclusivamente no texto de referência.
+
+    Retorne apenas:
+    - "APROVADO" se a resposta está correta e bem fundamentada
+    - "REPROVADO: [motivo]" se houver erro factual, imprecisão ou informação não baseada no texto

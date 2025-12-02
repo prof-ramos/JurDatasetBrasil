@@ -4,17 +4,13 @@ Implementa as operações CRUD para as tabelas do schema unificado.
 """
 
 from typing import List, Dict, Optional, Any
-from uuid import UUID, uuid4
-from datetime import datetime
 from supabase import create_client, Client
 from loguru import logger
-import numpy as np
 
 from config import (
     SUPABASE_URL,
     SUPABASE_KEY,
-    SUPABASE_SERVICE_ROLE_KEY,
-    EMBEDDING_DIMENSION
+    SUPABASE_SERVICE_ROLE_KEY
 )
 
 
@@ -158,6 +154,7 @@ class SupabaseDB:
         self,
         query_embedding: List[float],
         limit: int = 5,
+        match_threshold: float = 0.7,
         filters: Optional[Dict] = None
     ) -> List[Dict[str, Any]]:
         """
@@ -174,13 +171,19 @@ class SupabaseDB:
         embedding_str = f"[{','.join(map(str, query_embedding))}]"
 
         # Construir query com RPC para busca vetorial
+        rpc_params = {
+            "query_embedding": embedding_str,
+            "match_threshold": match_threshold,
+            "match_count": limit
+        }
+
+        # Adicionar filtros se houver
+        if filters:
+            rpc_params["filter"] = filters
+
         result = self.client.rpc(
             "match_chunks",
-            {
-                "query_embedding": embedding_str,
-                "match_threshold": 0.5,
-                "match_count": limit
-            }
+            rpc_params
         ).execute()
 
         return result.data or []
@@ -327,11 +330,15 @@ class SupabaseDB:
             return 0
 
         # Converter embeddings para string
+        # Converter embeddings para string (sem modificar lista original)
+        processed_chunks = []
         for chunk in chunks:
-            if isinstance(chunk.get("embedding"), list):
-                chunk["embedding"] = f"[{','.join(map(str, chunk['embedding']))}]"
+            chunk_copy = chunk.copy()
+            if isinstance(chunk_copy.get("embedding"), list):
+                chunk_copy["embedding"] = f"[{','.join(map(str, chunk_copy['embedding']))}]"
+            processed_chunks.append(chunk_copy)
 
-        result = self.client.table("chunks").insert(chunks).execute()
+        result = self.client.table("chunks").insert(processed_chunks).execute()
         count = len(result.data) if result.data else 0
         logger.info(f"✓ {count} chunks inseridos em batch")
         return count
@@ -342,11 +349,15 @@ class SupabaseDB:
             return 0
 
         # Converter embeddings para string
+        # Converter embeddings para string (sem modificar lista original)
+        processed_examples = []
         for example in examples:
-            if isinstance(example.get("embedding"), list):
-                example["embedding"] = f"[{','.join(map(str, example['embedding']))}]"
+            example_copy = example.copy()
+            if isinstance(example_copy.get("embedding"), list):
+                example_copy["embedding"] = f"[{','.join(map(str, example_copy['embedding']))}]"
+            processed_examples.append(example_copy)
 
-        result = self.client.table("examples").insert(examples).execute()
+        result = self.client.table("examples").insert(processed_examples).execute()
         count = len(result.data) if result.data else 0
         logger.info(f"✓ {count} exemplos inseridos em batch")
         return count
@@ -367,6 +378,57 @@ class SupabaseDB:
             stats[table] = result.count or 0
 
         return stats
+
+
+class MigrationManager:
+    """Gerenciador de migrações e checkpoints."""
+
+    def __init__(self, db: SupabaseDB):
+        self.db = db
+        self.client = db.client
+
+    def _create_checkpoint(self, name: str) -> str:
+        """Cria um ponto de verificação (início de migração)."""
+        data = {
+            "name": name,
+            "status": "started",
+            "started_at": "now()"
+        }
+        try:
+            result = self.client.table("migrations").insert(data).execute()
+            return result.data[0]["id"] if result.data else None
+        except Exception as e:
+            logger.warning(f"Não foi possível criar checkpoint (tabela migrations existe?): {e}")
+            return None
+
+    def _rollback_to_checkpoint(self, checkpoint_id: str):
+        """Reverte alterações feitas após o checkpoint (se possível)."""
+        # Nota: Rollback real em Supabase via API é limitado.
+        # Aqui apenas marcamos como falha.
+        if not checkpoint_id:
+            return
+
+        try:
+            self.client.table("migrations").update({
+                "status": "rolled_back",
+                "completed_at": "now()"
+            }).eq("id", checkpoint_id).execute()
+            logger.info(f"Checkpoint {checkpoint_id} marcado como rolled_back")
+        except Exception as e:
+            logger.error(f"Erro ao fazer rollback do checkpoint: {e}")
+
+    def complete_checkpoint(self, checkpoint_id: str):
+        """Marca checkpoint como concluído com sucesso."""
+        if not checkpoint_id:
+            return
+
+        try:
+            self.client.table("migrations").update({
+                "status": "completed",
+                "completed_at": "now()"
+            }).eq("id", checkpoint_id).execute()
+        except Exception as e:
+            logger.error(f"Erro ao completar checkpoint: {e}")
 
 
 if __name__ == "__main__":

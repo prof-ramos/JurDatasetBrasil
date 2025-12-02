@@ -4,9 +4,10 @@ Suporta modelos locais (sentence-transformers) e APIs externas (OpenAI).
 """
 
 from typing import List, Union, Optional
+import time
+import hashlib
 import numpy as np
 from loguru import logger
-import time
 
 # Imports condicionais
 try:
@@ -21,6 +22,7 @@ try:
     HAS_OPENAI = True
 except ImportError:
     HAS_OPENAI = False
+    logger.warning("openai não instalado. Use: pip install openai")
 
 
 class EmbeddingGenerator:
@@ -106,8 +108,7 @@ class EmbeddingGenerator:
             Lista de floats representando o embedding
         """
         if not text or not text.strip():
-            logger.warning("Texto vazio fornecido para embedding")
-            return [0.0] * self.dimension
+            raise ValueError("Texto vazio fornecido para embedding")
 
         if self.backend == "sentence-transformers":
             embedding = self.model.encode(text, convert_to_numpy=True)
@@ -123,7 +124,7 @@ class EmbeddingGenerator:
                 return response.data[0].embedding
             except Exception as e:
                 logger.error(f"Erro ao gerar embedding via OpenAI: {e}")
-                return [0.0] * self.dimension
+                raise RuntimeError(f"Falha ao gerar embedding via OpenAI: {e}") from e
 
         else:
             raise ValueError(f"Backend desconhecido: {self.backend}")
@@ -163,27 +164,35 @@ class EmbeddingGenerator:
             model_id = self.model_name.replace("openai/", "")
 
             # Processar em batches (OpenAI limita a 2048 textos por request)
-            for i in range(0, len(valid_texts), min(self.batch_size, 100)):
-                batch = valid_texts[i:i + min(self.batch_size, 100)]
+            openai_batch_size = min(self.batch_size, 100)
 
-                try:
-                    response = self.model.embeddings.create(
-                        model=model_id,
-                        input=batch
-                    )
-                    batch_embeddings = [item.embedding for item in response.data]
-                    embeddings.extend(batch_embeddings)
+            for i in range(0, len(valid_texts), openai_batch_size):
+                batch = valid_texts[i:i + openai_batch_size]
 
-                    if show_progress:
-                        logger.info(f"Processados {min(i + self.batch_size, len(valid_texts))}/{len(valid_texts)}")
+                # Retry logic
+                max_retries = 3
+                for attempt in range(max_retries):
+                    try:
+                        response = self.model.embeddings.create(
+                            model=model_id,
+                            input=batch
+                        )
+                        batch_embeddings = [item.embedding for item in response.data]
+                        embeddings.extend(batch_embeddings)
 
-                    # Rate limiting
-                    time.sleep(0.2)
+                        if show_progress:
+                            logger.info(f"Processados {min(i + openai_batch_size, len(valid_texts))}/{len(valid_texts)}")
 
-                except Exception as e:
-                    logger.error(f"Erro no batch {i}: {e}")
-                    # Adicionar embeddings vazios para manter sincronização
-                    embeddings.extend([[0.0] * self.dimension] * len(batch))
+                        break # Success
+
+                    except Exception as e:
+                        if attempt == max_retries - 1:
+                            logger.error(f"Erro no batch {i} após {max_retries} tentativas: {e}")
+                            raise RuntimeError(f"Falha ao gerar embeddings após retries: {e}") from e
+
+                        wait_time = (2 ** attempt) + (np.random.random() * 0.5)
+                        logger.warning(f"Erro no batch (tentativa {attempt+1}/{max_retries}): {e}. Aguardando {wait_time:.2f}s")
+                        time.sleep(wait_time)
 
             return embeddings
 
@@ -234,15 +243,25 @@ class EmbeddingGenerator:
         Returns:
             Lista de tuplas (índice, similaridade)
         """
-        similarities = [
-            (idx, self.cosine_similarity(query_embedding, emb))
-            for idx, emb in enumerate(candidate_embeddings)
-        ]
+        query = np.array(query_embedding)
+        candidates = np.array(candidate_embeddings)
 
-        # Ordenar por similaridade decrescente
-        similarities.sort(key=lambda x: x[1], reverse=True)
+        # Normalizar todos de uma vez
+        query_norm = query / (np.linalg.norm(query) + 1e-10)
+        candidates_norm = candidates / (np.linalg.norm(candidates, axis=1, keepdims=True) + 1e-10)
 
-        return similarities[:top_k]
+        # Calcular todas as similaridades de uma vez
+        similarities = np.dot(candidates_norm, query_norm)
+
+        # Pegar top-k índices
+        # Se houver menos candidatos que top_k, pegar todos
+        k = min(top_k, len(similarities))
+        if k == 0:
+            return []
+
+        top_indices = np.argsort(similarities)[::-1][:k]
+
+        return [(int(idx), float(similarities[idx])) for idx in top_indices]
 
     def get_dimension(self) -> int:
         """Retorna a dimensão dos embeddings."""
@@ -271,7 +290,9 @@ def get_embedding_generator(
     Returns:
         Instância de EmbeddingGenerator
     """
-    cache_key = f"{model_name}_{api_key}"
+    # Usar hash da API key para evitar vazamento
+    api_key_hash = hashlib.sha256(api_key.encode()).hexdigest() if api_key else "none"
+    cache_key = f"{model_name}_{api_key_hash}"
 
     if cache_key not in _generator_cache:
         _generator_cache[cache_key] = EmbeddingGenerator(model_name, api_key)

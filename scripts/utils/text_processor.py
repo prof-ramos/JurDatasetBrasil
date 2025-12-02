@@ -4,8 +4,7 @@ Inclui normalização, chunking e extração de estrutura.
 """
 
 import re
-from typing import List, Dict, Tuple, Optional
-from pathlib import Path
+from typing import List, Dict, Tuple, Optional, Any
 import tiktoken
 from loguru import logger
 
@@ -22,7 +21,7 @@ class TextProcessor:
         """
         try:
             self.encoder = tiktoken.get_encoding(encoding_name)
-        except Exception as e:
+        except (ImportError, ValueError, KeyError) as e:
             logger.warning(f"Falha ao carregar tiktoken: {e}. Usando contagem aproximada.")
             self.encoder = None
 
@@ -44,21 +43,21 @@ class TextProcessor:
         Returns:
             Texto limpo
         """
-        # Remove espaços múltiplos
-        text = re.sub(r'\s+', ' ', text)
+        # Normaliza quebras de linha primeiro
+        text = re.sub(r'\n{3,}', '\n\n', text)
+
+        # Remove espaços múltiplos (mantendo quebras de linha normalizadas)
+        text = re.sub(r'[ \t]+', ' ', text)
 
         # Remove espaços antes de pontuação
         text = re.sub(r'\s+([.,;:!?])', r'\1', text)
-
-        # Normaliza quebras de linha
-        text = re.sub(r'\n{3,}', '\n\n', text)
 
         # Remove espaços no início e fim
         text = text.strip()
 
         return text
 
-    def extract_article_structure(self, text: str) -> Dict[str, any]:
+    def extract_article_structure(self, text: str) -> Dict[str, Any]:
         """
         Extrai estrutura de um artigo (incisos, parágrafos, alíneas).
 
@@ -118,7 +117,7 @@ class TextProcessor:
         text: str,
         chunk_size: int = 1500,
         chunk_overlap: int = 200
-    ) -> List[Dict[str, any]]:
+    ) -> List[Dict[str, Any]]:
         """
         Divide texto em chunks com overlap.
 
@@ -140,19 +139,6 @@ class TextProcessor:
         current_chunk = []
         current_tokens = 0
         chunk_index = 0
-
-        for sentence in sentences:
-            sentence_tokens = self.count_tokens(sentence)
-
-            # Se adicionar a sentença ultrapassar o limite, salvar chunk atual
-            if current_tokens + sentence_tokens > chunk_size and current_chunk:
-                chunk_text = ' '.join(current_chunk)
-                chunks.append({
-                    "content": chunk_text,
-                    "tokens": self.count_tokens(chunk_text),
-                    "chunk_index": chunk_index,
-                    "start_sentence": current_chunk[0][:50] + "...",
-                    "end_sentence": "..." + current_chunk[-1][-50:]
                 })
 
                 # Manter overlap
@@ -176,13 +162,15 @@ class TextProcessor:
 
         # Adicionar último chunk
         if current_chunk:
-            chunk_text = ' '.join(current_chunk)
+            chunk_text = " ".join(current_chunk)
+            start_snippet = current_chunk[0][:50]
+            end_snippet = current_chunk[-1][-50:]
             chunks.append({
                 "content": chunk_text,
                 "tokens": self.count_tokens(chunk_text),
                 "chunk_index": chunk_index,
-                "start_sentence": current_chunk[0][:50] + "...",
-                "end_sentence": "..." + current_chunk[-1][-50:]
+                "start_sentence": start_snippet + ("..." if len(current_chunk[0]) > 50 else ""),
+                "end_sentence": ("..." if len(current_chunk[-1]) > 50 else "") + end_snippet
             })
 
         logger.debug(f"Texto dividido em {len(chunks)} chunks")
@@ -286,21 +274,23 @@ class TextProcessor:
         return None
 
 
+# Instância compartilhada para uso nas funções auxiliares
+_default_processor = TextProcessor()
+
+
 # Funções auxiliares para uso direto
 def clean_text(text: str) -> str:
     """Atalho para limpar texto."""
-    processor = TextProcessor()
-    return processor.clean_text(text)
+    return _default_processor.clean_text(text)
 
 
 def split_into_chunks(
     text: str,
     chunk_size: int = 1500,
     chunk_overlap: int = 200
-) -> List[Dict[str, any]]:
+) -> List[Dict[str, Any]]:
     """Atalho para dividir em chunks."""
-    processor = TextProcessor()
-    return processor.split_into_chunks(text, chunk_size, chunk_overlap)
+    return _default_processor.split_into_chunks(text, chunk_size, chunk_overlap)
 
 
 if __name__ == "__main__":

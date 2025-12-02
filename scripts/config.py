@@ -1,11 +1,12 @@
 """
 Configurações centralizadas do JurDatasetBrasil.
-Carrega variáveis de ambiente e define constantes do projeto.
+Carrega variáveis de ambiente e define constantes do projeto a partir de config.yaml.
 """
 
 import os
+import sys
+import yaml
 from pathlib import Path
-from typing import Optional
 from dotenv import load_dotenv
 from loguru import logger
 
@@ -30,14 +31,54 @@ for directory in [RAW_DOCS_DIR, MARKDOWN_DIR, CHUNKS_DIR, DATASET_DIR,
     directory.mkdir(parents=True, exist_ok=True)
 
 # =============================================================================
+# CARREGAMENTO DO CONFIG.YAML
+# =============================================================================
+CONFIG_PATH = PROJECT_ROOT / "config.yaml"
+
+def load_yaml_config():
+    if not CONFIG_PATH.exists():
+        logger.warning(f"Arquivo {CONFIG_PATH} não encontrado. Usando valores padrão.")
+        return {}
+    try:
+        with open(CONFIG_PATH, "r", encoding="utf-8") as f:
+            return yaml.safe_load(f)
+    except Exception as e:
+        logger.error(f"Erro ao ler config.yaml: {e}")
+        return {}
+
+YAML_CONFIG = load_yaml_config()
+
+# Helpers para acessar config com fallback
+def get_config(path: str, default=None):
+    """Acessa configuração aninhada ex: 'llm.generation.temperature'"""
+    keys = path.split('.')
+    value = YAML_CONFIG
+    for k in keys:
+        if isinstance(value, dict):
+            value = value.get(k)
+        else:
+            return default
+    return value if value is not None else default
+
+# =============================================================================
 # SUPABASE
 # =============================================================================
 SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
+
+# Use SERVICE_ROLE_KEY para operações de backend (bypassa RLS)
+# Use ANON_KEY apenas para operações públicas
+SUPABASE_KEY = os.getenv("SUPABASE_KEY") or SUPABASE_SERVICE_ROLE_KEY
+
+if not SUPABASE_KEY:
+    logger.warning("SUPABASE_KEY/SERVICE_ROLE_KEY não configurada, usando ANON_KEY (permissões limitadas)")
+    SUPABASE_KEY = SUPABASE_ANON_KEY
 
 if not SUPABASE_URL or not SUPABASE_KEY:
-    logger.warning("Credenciais do Supabase não configuradas. Algumas funcionalidades estarão desabilitadas.")
+    logger.error("Credenciais do Supabase não configuradas!")
+    # Não levantar erro aqui para permitir que o build da Vercel funcione sem .env local
+    # raise ValueError("SUPABASE_URL e SUPABASE_KEY são obrigatórios. Configure o arquivo .env")
 
 # =============================================================================
 # OPENROUTER / LLMs
@@ -45,42 +86,76 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
-# Modelos disponíveis
-LLM_MODELS = {
+if not OPENROUTER_API_KEY:
+    logger.warning("OPENROUTER_API_KEY não configurada. Funcionalidades de LLM estarão desabilitadas.")
+
+# Modelos disponíveis (carregados do YAML ou fallback)
+LLM_MODELS = get_config("llm.models", {
     "gemini": "google/gemini-flash-1.5",
     "grok": "x-ai/grok-beta",
     "default": "google/gemini-flash-1.5"
-}
+})
 
 # =============================================================================
 # EMBEDDINGS
 # =============================================================================
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
-EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", "384"))
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", get_config("embeddings.model", "sentence-transformers/all-MiniLM-L6-v2"))
+try:
+    EMBEDDING_DIMENSION = int(os.getenv("EMBEDDING_DIMENSION", str(get_config("embeddings.dimension", 384))))
+except ValueError:
+    logger.warning("EMBEDDING_DIMENSION inválida, usando padrão 384")
+    EMBEDDING_DIMENSION = 384
 
 # =============================================================================
 # CONFIGURAÇÕES DO PIPELINE
 # =============================================================================
 
+# Funções auxiliares para conversão segura
+def safe_int(env_var: str, config_path: str, default: str) -> int:
+    env_val = os.getenv(env_var)
+    if env_val:
+        try:
+            return int(env_val)
+        except ValueError:
+            pass
+    try:
+        return int(get_config(config_path, default))
+    except (ValueError, TypeError):
+        logger.warning(f"Valor inválido para {config_path}, usando padrão {default}")
+        return int(default)
+
+def safe_float(env_var: str, config_path: str, default: str) -> float:
+    env_val = os.getenv(env_var)
+    if env_val:
+        try:
+            return float(env_val)
+        except ValueError:
+            pass
+    try:
+        return float(get_config(config_path, default))
+    except (ValueError, TypeError):
+        logger.warning(f"Valor inválido para {config_path}, usando padrão {default}")
+        return float(default)
+
 # Chunking
-CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1500"))
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "200"))
+CHUNK_SIZE = safe_int("CHUNK_SIZE", "pipeline.chunk_size", "1500")
+CHUNK_OVERLAP = safe_int("CHUNK_OVERLAP", "pipeline.chunk_overlap", "200")
 
 # Geração de exemplos
-MAX_EXAMPLES_PER_CHUNK = int(os.getenv("MAX_EXAMPLES_PER_CHUNK", "3"))
-GENERATION_BATCH_SIZE = int(os.getenv("GENERATION_BATCH_SIZE", "10"))
-TEMPERATURE = float(os.getenv("TEMPERATURE", "0.3"))
+MAX_EXAMPLES_PER_CHUNK = safe_int("MAX_EXAMPLES_PER_CHUNK", "pipeline.max_examples_per_chunk", "3") # Valor padrão hardcoded se não estiver no yaml
+GENERATION_BATCH_SIZE = safe_int("GENERATION_BATCH_SIZE", "llm.generation.batch_size", "10")
+TEMPERATURE = safe_float("TEMPERATURE", "llm.generation.temperature", "0.3")
 
 # Qualidade
-MIN_OUTPUT_LENGTH = int(os.getenv("MIN_OUTPUT_LENGTH", "50"))
-MAX_OUTPUT_LENGTH = int(os.getenv("MAX_OUTPUT_LENGTH", "1000"))
-SIMILARITY_THRESHOLD = float(os.getenv("SIMILARITY_THRESHOLD", "0.85"))
+MIN_OUTPUT_LENGTH = safe_int("MIN_OUTPUT_LENGTH", "pipeline.min_output_length", "50")
+MAX_OUTPUT_LENGTH = safe_int("MAX_OUTPUT_LENGTH", "pipeline.max_output_length", "1000")
+SIMILARITY_THRESHOLD = safe_float("SIMILARITY_THRESHOLD", "pipeline.similarity_threshold", "0.85")
 
 # =============================================================================
 # EXECUÇÃO
 # =============================================================================
-NUM_WORKERS = int(os.getenv("NUM_WORKERS", "4"))
-API_DELAY = float(os.getenv("API_DELAY", "1.0"))
+NUM_WORKERS = safe_int("NUM_WORKERS", "execution.num_workers", "4")
+API_DELAY = safe_float("API_DELAY", "execution.api_delay", "1.0")
 ENV = os.getenv("ENV", "development")
 DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
@@ -107,7 +182,7 @@ logger.add(
     compression="zip"
 )
 logger.add(
-    lambda msg: print(msg, end=""),
+    sys.stdout,
     format=LOG_FORMAT,
     level=LOG_LEVEL,
     colorize=True
@@ -141,39 +216,18 @@ EXAMPLE_SCHEMA = {
 # =============================================================================
 # PROMPTS DE SISTEMA
 # =============================================================================
-GENERATION_SYSTEM_PROMPT = """Você é um especialista em Direito brasileiro com foco em questões estilo CESPE/FGV.
-Sua tarefa é criar questões jurídicas precisas, objetivas e baseadas EXCLUSIVAMENTE no texto fornecido.
+GENERATION_SYSTEM_PROMPT = get_config("prompts.generation_system", """Você é um especialista em Direito brasileiro.
+Crie questões jurídicas precisas baseadas no texto fornecido.""")
 
-REGRAS OBRIGATÓRIAS:
-1. Use SOMENTE informações contidas no texto fornecido
-2. Não invente dados, casos ou interpretações
-3. Mantenha a precisão técnica e a terminologia jurídica correta
-4. Cite artigos e parágrafos quando relevante
-5. Crie questões que testem compreensão, não memorização
-6. Varie o nível de dificuldade (fácil, médio, difícil)
-7. Responda de forma completa mas concisa (50-500 palavras)
-
-FORMATOS ACEITOS:
-- Questões objetivas (V/F com justificativa)
-- Questões discursivas
-- Análise de casos práticos
-- Explicação de conceitos
-"""
-
-VALIDATION_SYSTEM_PROMPT = """Você é um validador técnico de conteúdo jurídico.
-Avalie se a resposta está CORRETA e COMPLETA baseando-se exclusivamente no texto de referência.
-
-Retorne apenas:
-- "APROVADO" se a resposta está correta e bem fundamentada
-- "REPROVADO: [motivo]" se houver erro factual, imprecisão ou informação não baseada no texto
-"""
+VALIDATION_SYSTEM_PROMPT = get_config("prompts.validation_system", """Você é um validador técnico.
+Avalie se a resposta está correta baseando-se no texto de referência.""")
 
 # =============================================================================
 # FUNÇÕES AUXILIARES
 # =============================================================================
 def get_model_name(model_type: str = "default") -> str:
     """Retorna o nome completo do modelo LLM."""
-    return LLM_MODELS.get(model_type, LLM_MODELS["default"])
+    return LLM_MODELS.get(model_type, LLM_MODELS.get("default", "google/gemini-flash-1.5"))
 
 def validate_config() -> bool:
     """Valida se as configurações mínimas estão presentes."""
@@ -188,7 +242,11 @@ def validate_config() -> bool:
     if missing:
         logger.error(f"Variáveis de ambiente obrigatórias ausentes: {', '.join(missing)}")
         logger.error("Configure o arquivo .env baseado em .env.example")
-        return False
+        # Em ambiente de build (Vercel), podemos não ter .env, então retornamos False mas não quebramos se for import
+        if os.getenv("VERCEL"):
+             logger.warning("Rodando na Vercel, ignorando falta de .env no build time.")
+             return True
+        raise ValueError(f"Configuração inválida: variáveis ausentes: {', '.join(missing)}")
 
     logger.info("✓ Configuração validada com sucesso")
     return True
@@ -201,4 +259,8 @@ if __name__ == "__main__":
     logger.info(f"Diretório raiz: {PROJECT_ROOT}")
     logger.info(f"Modelo de embedding: {EMBEDDING_MODEL}")
     logger.info(f"Chunk size: {CHUNK_SIZE} tokens")
-    validate_config()
+    try:
+        validate_config()
+    except ValueError as e:
+        logger.error(f"Erro de configuração: {e}")
+        sys.exit(1)
