@@ -1,0 +1,85 @@
+# Pre-commit hooks para JurDatasetBrasil
+# Instale com: pip install pre-commit
+# Ative com: pre-commit install
+
+repos:
+  # Formatação de código Python com black
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        language_version: python3.11
+        args: [--line-length=100]
+
+  # Ordenação de imports
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black, --line-length=100]
+
+  # Linting com flake8
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        args: [--max-line-length=100, --extend-ignore=E203]
+
+  # Verificação de tipos com mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.11.2
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-all]
+        args: [--ignore-missing-imports]
+
+  # Hooks gerais de qualidade
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # Remove espaços em branco no final das linhas
+      - id: trailing-whitespace
+      # Garante arquivo termina com nova linha
+      - id: end-of-file-fixer
+      # Verifica sintaxe YAML
+      - id: check-yaml
+        args: [--unsafe]
+      # Verifica sintaxe JSON
+      - id: check-json
+      # Verifica arquivos grandes (>500KB)
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      # Detecta credenciais commitadas
+      - id: detect-private-key
+      # Verifica merge conflicts não resolvidos
+      - id: check-merge-conflict
+      # Verifica docstrings
+      - id: check-docstring-first
+
+  # Segurança - Bandit para detectar vulnerabilidades
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args: [-r, scripts/, -ll]
+        # -r: recursivo, -ll: apenas severidade LOW e acima
+
+  # Markdown linting
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.42.0
+    hooks:
+      - id: markdownlint
+        args: [--fix]
+
+  # Shell script linting
+  - repo: https://github.com/shellcheck-py/shellcheck-py
+    rev: v0.10.0.1
+    hooks:
+      - id: shellcheck
+
+# Configurações globais
+default_language_version:
+  python: python3.11
+
+# Configurações de execução
+fail_fast: false

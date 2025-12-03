@@ -1,0 +1,38 @@
+# Configuração do flake8 (linter Python)
+
+[flake8]
+max-line-length = 100
+extend-ignore =
+    # E203: whitespace before ':' (incompatível com black)
+    E203,
+    # W503: line break before binary operator (incompatível com black)
+    W503,
+    # E501: line too long (black já cuida disso)
+    E501
+
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    .eggs,
+    *.egg,
+    build,
+    dist,
+    .mypy_cache,
+    .pytest_cache,
+    node_modules,
+    .tox
+
+per-file-ignores =
+    # Permite imports não utilizados em __init__.py
+    __init__.py:F401,F403
+    # Permite variáveis não utilizadas em conftest.py
+    conftest.py:F401,F811
+
+# Complexidade ciclomática máxima (McCabe)
+max-complexity = 10
+
+# Contagem de imports por arquivo
+import-order-style = google
+application-import-names = scripts

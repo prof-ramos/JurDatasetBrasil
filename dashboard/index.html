@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JurDatasetBrasil - Dashboard de Progresso</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 40px;
+            background: #f8f9fa;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card h3 {
+            font-size: 2.5em;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-card p {
+            color: #666;
+            font-size: 1em;
+        }
+
+        .phases {
+            padding: 40px;
+        }
+
+        .phase {
+            margin-bottom: 30px;
+            border-left: 4px solid #667eea;
+            padding-left: 20px;
+        }
+
+        .phase h2 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+
+        .phase-meta {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: width 0.5s ease;
+        }
+
+        .task-list {
+            margin-top: 15px;
+        }
+
+        .task {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 8px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+        }
+
+        .task.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .task.in-progress {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .task-icon {
+            margin-right: 10px;
+            font-size: 1.2em;
+        }
+
+        footer {
+            background: #1e3c72;
+            color: white;
+            text-align: center;
+            padding: 30px;
+        }
+
+        footer a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .badge.mvp {
+            background: #28a745;
+            color: white;
+        }
+
+        .badge.planned {
+            background: #6c757d;
+            color: white;
+        }
+
+        .badge.in-progress {
+            background: #ffc107;
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8em;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🇧🇷 JurDatasetBrasil</h1>
+            <p>O Maior Dataset Jurídico Aberto do Brasil</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Acompanhe o progresso em tempo real</p>
+        </header>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>0</h3>
+                <p>Exemplos Gerados</p>
+            </div>
+            <div class="stat-card">
+                <h3>1</h3>
+                <p>Leis Processadas</p>
+            </div>
+            <div class="stat-card">
+                <h3>0%</h3>
+                <p>Progresso Geral</p>
+            </div>
+            <div class="stat-card">
+                <h3>Meta: 300k</h3>
+                <p>Até Maio/2027</p>
+            </div>
+        </div>
+
+        <div class="phases">
+            <div class="phase">
+                <h2>🏗️ Fase 0: Infraestrutura e MVP <span class="badge in-progress">EM ANDAMENTO</span></h2>
+                <div class="phase-meta">
+                    <strong>Meta:</strong> 12.000 exemplos da Lei 9.784/99 |
+                    <strong>Prazo:</strong> Dezembro/2025
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 25%;">25%</div>
+                </div>
+                <div class="task-list">
+                    <div class="task completed">
+                        <span class="task-icon">✅</span>
+                        <span>Criar estrutura de diretórios (0-RawDocs, 1-MarkdownClean, etc.)</span>
+                    </div>
+                    <div class="task completed">
+                        <span class="task-icon">✅</span>
+                        <span>Configurar variáveis de ambiente (.env.example)</span>
+                    </div>
+                    <div class="task in-progress">
+                        <span class="task-icon">🔄</span>
+                        <span>Implementar script de conversão Docling (PDF/Docx → Markdown)</span>
+                    </div>
+                    <div class="task">
+                        <span class="task-icon">⬜</span>
+                        <span>Implementar Chunking (1-2k tokens)</span>
+                    </div>
+                    <div class="task">
+                        <span class="task-icon">⬜</span>
+                        <span>Desenvolver prompts para geração de Q/A (Grok/Gemini)</span>
+                    </div>
+                    <div class="task">
+                        <span class="task-icon">⬜</span>
+                        <span>Implementar validador de schema JSONL</span>
+                    </div>
+                    <div class="task">
+                        <span class="task-icon">⬜</span>
+                        <span>Ingestão da Lei 9.784/99</span>
+                    </div>
+                    <div class="task">
+                        <span class="task-icon">⬜</span>
+                        <span>Upload da versão v0.1 para Hugging Face (Privado)</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="phase">
+                <h2>🚀 Fase 1: Direito Administrativo <span class="badge planned">PLANEJADO</span></h2>
+                <div class="phase-meta">
+                    <strong>Meta:</strong> 50.000 exemplos totais |
+                    <strong>Prazo:</strong> Jan–Mar/2026
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 0%;">0%</div>
+                </div>
+                <p style="color: #666; margin-top: 10px;">
+                    Expansão completa do Direito Administrativo com Leis 8.112/90, 8.429/92, 13.655/18 e 14.133/21
+                </p>
+            </div>
+
+            <div class="phase">
+                <h2>⚖️ Fase 2: Constitucional e Tributário <span class="badge planned">PLANEJADO</span></h2>
+                <div class="phase-meta">
+                    <strong>Meta:</strong> 60.000 exemplos acumulados |
+                    <strong>Prazo:</strong> Abr–Jul/2026
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 0%;">0%</div>
+                </div>
+                <p style="color: #666; margin-top: 10px;">
+                    Constituição Federal (CF/88) e Código Tributário Nacional (CTN)
+                </p>
+            </div>
+
+            <div class="phase">
+                <h2>🔒 Fase 3: Penal e Processo Penal <span class="badge planned">PLANEJADO</span></h2>
+                <div class="phase-meta">
+                    <strong>Meta:</strong> 70.000 exemplos acumulados |
+                    <strong>Prazo:</strong> Ago–Dez/2026
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 0%;">0%</div>
+                </div>
+                <p style="color: #666; margin-top: 10px;">
+                    Código Penal, CPP e Leis Penais Especiais
+                </p>
+            </div>
+
+            <div class="phase">
+                <h2>🌐 Fase 4: Consolidação e Escala <span class="badge planned">PLANEJADO</span></h2>
+                <div class="phase-meta">
+                    <strong>Meta:</strong> 300.000+ exemplos |
+                    <strong>Prazo:</strong> Jan–Mai/2027
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 0%;">0%</div>
+                </div>
+                <p style="color: #666; margin-top: 10px;">
+                    Código Civil, CPC, CDC, CLT e Legislação Ambiental
+                </p>
+            </div>
+        </div>
+
+        <footer>
+            <p><strong>JurDatasetBrasil</strong> - Um projeto open-source para democratizar o acesso a dados jurídicos brasileiros</p>
+            <p style="margin-top: 10px;">
+                <a href="https://github.com/prof-ramos/JurDatasetBrasil" target="_blank">GitHub</a> |
+                <a href="https://huggingface.co/datasets/jur-dataset-brasil" target="_blank">Hugging Face</a>
+            </p>
+            <p style="margin-top: 15px; font-size: 0.9em; opacity: 0.8;">
+                Licença: Dataset (CC-BY-4.0) | Scripts (MIT)
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Atualização automática futura: carregar dados de um JSON ou API
+        console.log('Dashboard carregado. Progresso: Fase 0 - 25%');
+    </script>
+</body>
+</html>
